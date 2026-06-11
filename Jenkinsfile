@@ -40,5 +40,16 @@ pipeline {
                 '''
             }
         }
+
+        stage('Deploy to ECS') {
+            steps {
+                sh '''
+                aws ecs update-service \
+                --cluster silent-hamster-zdpb94 \
+                --service nexusdeploy-task-service-lxmq52vu \
+                --force-new-deployment
+                '''
+            }
+        }
     }
 }
