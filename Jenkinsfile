@@ -1,49 +1,47 @@
 pipeline {
-agent any
+    agent any
 
-```
-stages {
+    stages {
 
-    stage('SonarQube Analysis') {
-        steps {
-            script {
-                def scannerHome = tool 'SonarScanner'
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'SonarScanner'
 
-                withSonarQubeEnv('SonarQube') {
-                    sh """
-                    ${scannerHome}/bin/sonar-scanner \
-                    -Dsonar.projectKey=NexusDeploy \
-                    -Dsonar.projectName=NexusDeploy \
-                    -Dsonar.sources=.
-                    """
+                    withSonarQubeEnv('SonarQube') {
+                        sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=NexusDeploy \
+                        -Dsonar.projectName=NexusDeploy \
+                        -Dsonar.sources=.
+                        """
+                    }
                 }
             }
         }
-    }
 
-    stage('Trivy Scan') {
-        steps {
-            sh 'trivy fs .'
+        stage('Trivy Scan') {
+            steps {
+                sh 'trivy fs .'
+            }
         }
-    }
 
-    stage('Build Docker Image') {
-        steps {
-            sh 'docker build -t nexusdeploy:v1 .'
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t nexusdeploy:v1 .'
+            }
         }
-    }
 
-    stage('Deploy to ECS') {
-        steps {
-            sh '''
-            aws ecs update-service \
-            --cluster silent-hamster-zdpb94 \
-            --service nexusdeploy-task-service-lxmq52vu \
-            --force-new-deployment
-            '''
+        stage('Deploy to ECS') {
+            steps {
+                sh '''
+                aws ecs update-service \
+                --cluster silent-hamster-zdpb94 \
+                --service nexusdeploy-task-service-lxmq52vu \
+                --force-new-deployment
+                '''
+            }
         }
-    }
-}
-```
 
+    }
 }
