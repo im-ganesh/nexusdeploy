@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    environment {
+        AWS_REGION = 'us-east-1'
+        ECR_REPO = '910617066292.dkr.ecr.us-east-1.amazonaws.com/nexusdeploy'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
 
         stage('SonarQube Analysis') {
@@ -28,26 +34,26 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t nexusdeploy:v1 .'
+                sh """
+                docker build -t nexusdeploy:${BUILD_NUMBER} .
+                """
             }
         }
 
-        stage('Run Container') {
+        stage('Login to ECR') {
             steps {
                 sh '''
-                docker rm -f nexusdeploy-container || true
-                docker run -d --name nexusdeploy-container -p 80:80 nexusdeploy:v1
+                aws ecr get-login-password --region us-east-1 | \
+                docker login --username AWS --password-stdin 910617066292.dkr.ecr.us-east-1.amazonaws.com
                 '''
             }
         }
 
-        stage('Deploy to ECS') {
+        stage('Push Image to ECR') {
             steps {
                 sh '''
-                aws ecs update-service \
-                --cluster silent-hamster-zdpb94 \
-                --service nexusdeploy-task-service-lxmq52vu \
-                --force-new-deployment
+                docker tag nexusdeploy:${BUILD_NUMBER} ${ECR_REPO}:${BUILD_NUMBER}
+                docker push ${ECR_REPO}:${BUILD_NUMBER}
                 '''
             }
         }
