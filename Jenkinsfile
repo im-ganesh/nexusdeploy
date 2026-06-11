@@ -20,6 +20,12 @@ pipeline {
             }
         }
 
+        stage('Trivy Scan') {
+            steps {
+                sh 'trivy fs .'
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t nexusdeploy:v1 .'
