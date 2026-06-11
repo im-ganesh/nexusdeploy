@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexusDeploy — CI/CD Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f4f0;
+    color: #1a1a18;
+    min-height: 100vh;
+  }
+  header {
+    background: #1a1a18;
+    color: #f0efe9;
+    padding: 28px 40px 24px;
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+  }
+  header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+  header p  { font-size: 13px; color: #9c9a90; margin-top: 4px; }
+  .badge {
+    background: #1D9E75; color: #04342C;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 99px;
+    margin-left: auto; align-self: center;
+  }
+
+  main { padding: 36px 40px; max-width: 1100px; margin: 0 auto; }
+
+  .diagram-wrap {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #dddbd3;
+    padding: 32px 24px;
+    margin-bottom: 36px;
+    overflow-x: auto;
+  }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-bottom: 28px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: #5f5e5a;
+  }
+  .legend-dot {
+    width: 12px; height: 12px; border-radius: 3px;
+  }
+
+  /* ── Tech table ── */
+  .section-title {
+    font-size: 15px; font-weight: 600; margin-bottom: 14px; color: #1a1a18;
+  }
+  table {
+    width: 100%; border-collapse: collapse;
+    background: #fff; border-radius: 12px; overflow: hidden;
+    border: 1px solid #dddbd3; font-size: 13px;
+  }
+  th {
+    background: #f1efe8; text-align: left;
+    padding: 10px 16px; font-weight: 600; color: #444441;
+    border-bottom: 1px solid #dddbd3;
+  }
+  td { padding: 10px 16px; border-bottom: 1px solid #eeece6; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #faf9f6; }
+  .tag {
+    display: inline-block;
+    background: #E1F5EE; color: #085041;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 99px; margin-right: 4px;
+  }
+
+  /* ── Pipeline steps ── */
+  .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 14px; margin-top: 20px; }
+  .step {
+    background: #fff; border: 1px solid #dddbd3;
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .step-num {
+    font-size: 11px; font-weight: 700; color: #0F6E56;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+  .step h3 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .step p  { font-size: 12px; color: #5f5e5a; line-height: 1.5; }
+
+  footer {
+    text-align: center; font-size: 12px; color: #888780;
+    padding: 24px 0 32px;
+  }
+
+  /* ── SVG colours ── */
+  .c-purple rect { fill: #EEEDFE; stroke: #534AB7; }
+  .c-purple .th  { fill: #3C3489; }
+  .c-purple .ts  { fill: #534AB7; }
+  .c-teal rect   { fill: #E1F5EE; stroke: #0F6E56; }
+  .c-teal .th    { fill: #085041; }
+  .c-teal .ts    { fill: #0F6E56; }
+  .c-amber rect  { fill: #FAEEDA; stroke: #854F0B; }
+  .c-amber .th   { fill: #633806; }
+  .c-amber .ts   { fill: #854F0B; }
+  .c-coral rect  { fill: #FAECE7; stroke: #993C1D; }
+  .c-coral .th   { fill: #711B13; }
+  .c-coral .ts   { fill: #993C1D; }
+  .c-blue rect   { fill: #E6F1FB; stroke: #185FA5; }
+  .c-blue .th    { fill: #0C447C; }
+  .c-blue .ts    { fill: #185FA5; }
+  .c-green rect  { fill: #EAF3DE; stroke: #3B6D11; }
+  .c-green .th   { fill: #27500A; }
+  .c-green .ts   { fill: #3B6D11; }
+  .c-gray rect   { fill: #F1EFE8; stroke: #5F5E5A; }
+  .c-gray .th    { fill: #444441; }
+  .c-gray .ts    { fill: #5F5E5A; }
+
+  text.th { font-family: inherit; font-size: 14px; font-weight: 600; }
+  text.ts { font-family: inherit; font-size: 12px; font-weight: 400; }
+
+  .arr { stroke: #888780; stroke-width: 1.2; fill: none; }
+  .dashed { stroke: #bbb9b0; stroke-width: 0.8; stroke-dasharray: 5 4; fill: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🚀 NexusDeploy Enterprise CI/CD Platform</h1>
+    <p>End-to-end architecture — from code commit to production deployment</p>
+  </div>
+  <span class="badge">Production Grade</span>
+</header>
+
+<main>
+
+  <!-- ── Legend ── -->
+  <div class="legend" style="margin-top:0; margin-bottom:20px;">
+    <div class="legend-item"><div class="legend-dot" style="background:#EEEDFE;border:1.5px solid #534AB7"></div> Developer / Source</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E1F5EE;border:1.5px solid #0F6E56"></div> CI / Build</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FAEEDA;border:1.5px solid #854F0B"></div> Code Quality</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FAECE7;border:1.5px solid #993C1D"></div> Security Scan</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E6F1FB;border:1.5px solid #185FA5"></div> AWS Cloud</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#EAF3DE;border:1.5px solid #3B6D11"></div> Live App</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#F1EFE8;border:1.5px solid #5F5E5A"></div> Monitoring / Infra</div>
+  </div>
+
+  <!-- ── Architecture SVG ── -->
+  <div class="diagram-wrap">
+    <svg width="100%" viewBox="0 0 900 960" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Phase labels -->
+      <text x="30" y="100" font-size="10" fill="#aaa9a0" font-family="sans-serif" text-anchor="middle" transform="rotate(-90,30,100)">SOURCE</text>
+      <text x="30" y="290" font-size="10" fill="#aaa9a0" font-family="sans-serif" text-anchor="middle" transform="rotate(-90,30,290)">CI PIPELINE</text>
+      <text x="30" y="550" font-size="10" fill="#aaa9a0" font-family="sans-serif" text-anchor="middle" transform="rotate(-90,30,550)">BUILD</text>
+      <text x="30" y="710" font-size="10" fill="#aaa9a0" font-family="sans-serif" text-anchor="middle" transform="rotate(-90,30,710)">DEPLOY</text>
+      <text x="30" y="880" font-size="10" fill="#aaa9a0" font-family="sans-serif" text-anchor="middle" transform="rotate(-90,30,880)">MONITOR</text>
+
+      <!-- Divider lines -->
+      <line x1="60" y1="155" x2="840" y2="155" stroke="#e8e6df" stroke-width="0.8" stroke-dasharray="4 4"/>
+      <line x1="60" y1="410" x2="840" y2="410" stroke="#e8e6df" stroke-width="0.8" stroke-dasharray="4 4"/>
+      <line x1="60" y1="600" x2="840" y2="600" stroke="#e8e6df" stroke-width="0.8" stroke-dasharray="4 4"/>
+      <line x1="60" y1="790" x2="840" y2="790" stroke="#e8e6df" stroke-width="0.8" stroke-dasharray="4 4"/>
+
+      <!-- ── 1. Developer ── -->
+      <g class="c-purple">
+        <rect x="310" y="40" width="220" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="420" y="65" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#3C3489">Developer</text>
+        <text class="ts" x="420" y="85" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#534AB7">Pushes code to GitHub</text>
+      </g>
+
+      <line x1="420" y1="100" x2="420" y2="130" stroke="#888780" stroke-width="1.2" marker-end="url(#arr)"/>
+
+      <!-- ── 2. GitHub ── -->
+      <g class="c-gray">
+        <rect x="300" y="130" width="240" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="420" y="155" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#444441">GitHub repository</text>
+        <text class="ts" x="420" y="175" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Webhook fires on push event</text>
+      </g>
+
+      <line x1="420" y1="190" x2="420" y2="220" stroke="#888780" stroke-width="1.2" marker-end="url(#arr)"/>
+
+      <!-- ── 3. Jenkins ── -->
+      <g class="c-teal">
+        <rect x="290" y="220" width="260" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="420" y="245" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#085041">Jenkins pipeline</text>
+        <text class="ts" x="420" y="265" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0F6E56">Orchestrates all CI/CD stages</text>
+      </g>
+
+      <!-- Fan out lines from Jenkins -->
+      <path d="M340 280 L340 320 L180 320 L180 340" stroke="#888780" stroke-width="1" stroke-dasharray="none" fill="none" marker-end="url(#arr)"/>
+      <line x1="420" y1="280" x2="420" y2="340" stroke="#888780" stroke-width="1" marker-end="url(#arr)"/>
+      <path d="M500 280 L500 320 L660 320 L660 340" stroke="#888780" stroke-width="1" fill="none" marker-end="url(#arr)"/>
+
+      <!-- ── 4a. Build ── -->
+      <g class="c-teal">
+        <rect x="90" y="340" width="180" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="180" y="365" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#085041">Build</text>
+        <text class="ts" x="180" y="383" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0F6E56">Compile &amp; package app</text>
+      </g>
+
+      <!-- ── 4b. SonarQube ── -->
+      <g class="c-amber">
+        <rect x="320" y="340" width="200" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="420" y="365" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#633806">SonarQube</text>
+        <text class="ts" x="420" y="383" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#854F0B">Bugs · smells · coverage</text>
+      </g>
+
+      <!-- ── 4c. Trivy ── -->
+      <g class="c-coral">
+        <rect x="570" y="340" width="180" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="660" y="365" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#711B13">Trivy scan</text>
+        <text class="ts" x="660" y="383" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#993C1D">CVEs · dependencies</text>
+      </g>
+
+      <!-- Converge lines -->
+      <path d="M180 400 L180 450 L420 450" stroke="#888780" stroke-width="1" fill="none"/>
+      <line x1="420" y1="400" x2="420" y2="450" stroke="#888780" stroke-width="1" fill="none"/>
+      <path d="M660 400 L660 450 L420 450" stroke="#888780" stroke-width="1" fill="none"/>
+      <line x1="420" y1="450" x2="420" y2="468" stroke="#888780" stroke-width="1" marker-end="url(#arr)"/>
+      <text x="420" y="462" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#aaa9a0">All gates pass → continue</text>
+
+      <!-- ── 5. Docker Image Build ── -->
+      <g class="c-teal">
+        <rect x="290" y="470" width="260" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="420" y="495" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#085041">Docker image build</text>
+        <text class="ts" x="420" y="513" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#0F6E56">App packaged as container</text>
+      </g>
+
+      <line x1="420" y1="530" x2="420" y2="560" stroke="#888780" stroke-width="1.2" marker-end="url(#arr)"/>
+
+      <!-- ── AWS Cloud dashed boundary ── -->
+      <rect x="70" y="560" width="760" height="380" rx="16" fill="none" stroke="#b5d4f4" stroke-width="1" stroke-dasharray="7 5"/>
+      <text x="100" y="580" font-family="sans-serif" font-size="10" fill="#185FA5" font-weight="600">☁  AWS Cloud</text>
+
+      <!-- Side boxes inside AWS -->
+
+      <!-- EC2 hosts -->
+      <rect x="90" y="600" width="140" height="50" rx="8" fill="none" stroke="#b5d4f4" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <text x="160" y="620" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#185FA5" font-weight="600">EC2 instances</text>
+      <text x="160" y="637" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#378ADD">Jenkins · SonarQube · Trivy</text>
+      <line x1="230" y1="625" x2="286" y2="625" stroke="#b5d4f4" stroke-width="0.7" stroke-dasharray="3 3"/>
+
+      <!-- IAM -->
+      <rect x="90" y="680" width="140" height="50" rx="8" fill="none" stroke="#b5d4f4" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <text x="160" y="700" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#185FA5" font-weight="600">IAM roles</text>
+      <text x="160" y="717" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#378ADD">Access control</text>
+      <line x1="230" y1="705" x2="286" y2="705" stroke="#b5d4f4" stroke-width="0.7" stroke-dasharray="3 3"/>
+
+      <!-- Terraform -->
+      <rect x="610" y="600" width="140" height="50" rx="8" fill="none" stroke="#b5d4f4" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <text x="680" y="620" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#185FA5" font-weight="600">Terraform</text>
+      <text x="680" y="637" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#378ADD">Infrastructure as code</text>
+      <line x1="610" y1="625" x2="558" y2="625" stroke="#b5d4f4" stroke-width="0.7" stroke-dasharray="3 3"/>
+
+      <!-- ── 6. Amazon ECR ── -->
+      <g class="c-blue">
+        <rect x="290" y="580" width="260" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="420" y="605" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#0C447C">Amazon ECR</text>
+        <text class="ts" x="420" y="623" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#185FA5">Encrypted container registry</text>
+      </g>
+
+      <line x1="420" y1="640" x2="420" y2="670" stroke="#888780" stroke-width="1.2" marker-end="url(#arr)"/>
+
+      <!-- ── 7. ECS Fargate ── -->
+      <g class="c-blue">
+        <rect x="290" y="670" width="260" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="420" y="695" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#0C447C">Amazon ECS Fargate</text>
+        <text class="ts" x="420" y="713" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#185FA5">Serverless container deploy</text>
+      </g>
+
+      <line x1="420" y1="730" x2="420" y2="760" stroke="#888780" stroke-width="1.2" marker-end="url(#arr)"/>
+
+      <!-- ── 8. Application Live ── -->
+      <g class="c-green">
+        <rect x="300" y="760" width="240" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="420" y="785" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#27500A">Application live</text>
+        <text class="ts" x="420" y="803" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#3B6D11">Auto-scaled · HA · available</text>
+      </g>
+
+      <!-- Terraform side pointer to ECS -->
+      <rect x="610" y="680" width="140" height="50" rx="8" fill="none" stroke="#b5d4f4" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <text x="680" y="700" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#185FA5" font-weight="600">Auto Scaling</text>
+      <text x="680" y="717" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#378ADD">Scale on demand</text>
+      <line x1="610" y1="705" x2="552" y2="705" stroke="#b5d4f4" stroke-width="0.7" stroke-dasharray="3 3"/>
+
+      <line x1="420" y1="820" x2="420" y2="850" stroke="#888780" stroke-width="1.2" marker-end="url(#arr)"/>
+
+      <!-- ── 9. CloudWatch ── -->
+      <g class="c-gray">
+        <rect x="290" y="850" width="260" height="60" rx="10" stroke-width="0.8"/>
+        <text class="th" x="420" y="875" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" font-weight="600" fill="#444441">CloudWatch</text>
+        <text class="ts" x="420" y="893" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="12" fill="#5F5E5A">Logs · metrics · alerts</text>
+      </g>
+
+    </svg>
+  </div>
+
+  <!-- ── Pipeline stages table ── -->
+  <div class="section-title">CI/CD Pipeline Stages</div>
+  <div class="steps">
+    <div class="step"><div class="step-num">Stage 1</div><h3>Source code commit</h3><p>Developer pushes code to GitHub repository, triggering the automation chain.</p></div>
+    <div class="step"><div class="step-num">Stage 2</div><h3>Webhook trigger</h3><p>GitHub webhook fires automatically, launching the Jenkins pipeline — no manual steps.</p></div>
+    <div class="step"><div class="step-num">Stage 3</div><h3>Build application</h3><p>Jenkins compiles and packages the application artifact.</p></div>
+    <div class="step"><div class="step-num">Stage 4</div><h3>Code quality (SonarQube)</h3><p>Scans for bugs, code smells, vulnerabilities, and maintainability issues.</p></div>
+    <div class="step"><div class="step-num">Stage 5</div><h3>Security scan (Trivy)</h3><p>Scans container and dependencies for known CVEs and security risks.</p></div>
+    <div class="step"><div class="step-num">Stage 6</div><h3>Docker image build</h3><p>Application is packaged into an immutable Docker container image.</p></div>
+    <div class="step"><div class="step-num">Stage 7</div><h3>Push to Amazon ECR</h3><p>Image is stored securely in the encrypted private container registry.</p></div>
+    <div class="step"><div class="step-num">Stage 8</div><h3>Deploy to ECS Fargate</h3><p>Latest container version is deployed automatically as a serverless task.</p></div>
+    <div class="step"><div class="step-num">Stage 9</div><h3>Monitoring</h3><p>CloudWatch tracks logs, metrics, health status, and fires alerts.</p></div>
+  </div>
+
+  <!-- ── Tech stack table ── -->
+  <div class="section-title" style="margin-top:32px;">Technology Stack</div>
+  <table>
+    <thead>
+      <tr><th>Category</th><th>Technology</th><th>Role</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Version control</td><td><span class="tag">Git</span><span class="tag">GitHub</span></td><td>Source code management &amp; webhook trigger</td></tr>
+      <tr><td>CI/CD orchestration</td><td><span class="tag">Jenkins</span></td><td>Runs and coordinates all pipeline stages</td></tr>
+      <tr><td>Code quality</td><td><span class="tag">SonarQube</span></td><td>Static analysis, coverage, bug detection</td></tr>
+      <tr><td>Security scanning</td><td><span class="tag">Trivy</span></td><td>CVE and dependency vulnerability scanning</td></tr>
+      <tr><td>Containerisation</td><td><span class="tag">Docker</span></td><td>Build and package application images</td></tr>
+      <tr><td>Container registry</td><td><span class="tag">Amazon ECR</span></td><td>Encrypted private image storage</td></tr>
+      <tr><td>Container orchestration</td><td><span class="tag">Amazon ECS Fargate</span></td><td>Serverless deployment and scaling</td></tr>
+      <tr><td>Cloud platform</td><td><span class="tag">AWS EC2</span><span class="tag">IAM</span><span class="tag">CloudWatch</span></td><td>Compute, access control, monitoring</td></tr>
+      <tr><td>Infrastructure as code</td><td><span class="tag">Terraform</span></td><td>Provision and manage all AWS resources</td></tr>
+    </tbody>
+  </table>
+
+</main>
+
+<footer>NexusDeploy — by Ganesh &nbsp;·&nbsp; DevOps | AWS Cloud Engineer | CI/CD Enthusiast</footer>
+
+</body>
+</html>
