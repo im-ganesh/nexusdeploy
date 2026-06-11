@@ -5,7 +5,6 @@ agent any
 environment {
     AWS_REGION = 'us-east-1'
     ECR_REPO = '910617066292.dkr.ecr.us-east-1.amazonaws.com/nexusdeploy'
-    IMAGE_TAG = "${BUILD_NUMBER}"
 }
 
 stages {
@@ -35,9 +34,7 @@ stages {
 
     stage('Build Docker Image') {
         steps {
-            sh """
-            docker build -t nexusdeploy:${BUILD_NUMBER} .
-            """
+            sh 'docker build -t nexusdeploy:v1 .'
         }
     }
 
@@ -52,8 +49,8 @@ stages {
     stage('Push Image to ECR') {
         steps {
             sh '''
-            docker tag nexusdeploy:${BUILD_NUMBER} ${ECR_REPO}:${BUILD_NUMBER}
-            docker push ${ECR_REPO}:${BUILD_NUMBER}
+            docker tag nexusdeploy:v1 ${ECR_REPO}:v1
+            docker push ${ECR_REPO}:v1
             '''
         }
     }
